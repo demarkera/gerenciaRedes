@@ -8,18 +8,18 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 
-public class Manager{
+public class Manager {
 
 	/* Parametros do trabalho */
-	static String SERVERIP = "127.0.0.1";
-	static int SERVERPORTSEND = 54654;
-	static int SERVERPORTRECEIVE = 54655;
-	static int TOTAL_PACKETS = 1000;
+	private String SERVERIP = "127.0.0.1";
+	private int SERVERPORTSEND = 54654;
+	private int SERVERPORTRECEIVE = 54655;
+	private int TOTAL_PACKETS = 1000;
 
-	static BufferedWriter output;
-	private static FileWriter outputfstream;
+	BufferedWriter output;
+	private FileWriter outputfstream;
 
-	public static void main(String[] args) {
+	public Manager() {
 		try {
 			System.out.println("initializing Manager");
 			InetAddress serverAddr = InetAddress.getByName(SERVERIP);
@@ -28,7 +28,8 @@ public class Manager{
 			byte[] buf = new byte[1472];
 			DatagramPacket packet;
 			/* Creates UDP packet with data and destination */
-			packet = new DatagramPacket(buf, buf.length, serverAddr, SERVERPORTSEND);
+			packet = new DatagramPacket(buf, buf.length, serverAddr,
+					SERVERPORTSEND);
 			System.out.println("sending data");
 			sendData(socket, buf, packet);
 			/* All messages sent, close the socket */
@@ -39,14 +40,16 @@ public class Manager{
 		}
 	}
 
-	private static void sendData(DatagramSocket socket, byte[] buf, DatagramPacket packet) throws IOException, InterruptedException {
-		//aqui vem a lógica de enviar  dados snmp
+	private void sendData(DatagramSocket socket, byte[] buf,
+			DatagramPacket packet) throws IOException, InterruptedException {
+		// aqui vem a lógica de enviar dados snmp
 		for (int i = 0; i < TOTAL_PACKETS; i++) {
-			System.arraycopy(ByteBuffer.allocate(4).putInt(i).array(), 0, buf, 0, 4);
+			System.arraycopy(ByteBuffer.allocate(4).putInt(i).array(), 0, buf,
+					0, 4);
 			socket.send(packet);
 			Thread.sleep(1, 0); // 10 milliseconds
 			if (i % 100 == 0) {
-				System.out.println("[C]: Packets sent: i= "+i);
+				System.out.println("[C]: Packets sent: i= " + i);
 			}
 		}
 	}
