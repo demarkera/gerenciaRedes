@@ -16,7 +16,7 @@ public class Agent {
 	private int TOTAL_PACKETS = 1;
 	private ArrayList<GeladeiraModel> listaGeladeiras;
 
-	public Agent(){
+	public Agent() {
 		init();
 		try {
 			System.out.println(String.format("Agent: Agente sendo iniciado"));
@@ -25,17 +25,17 @@ public class Agent {
 			System.out.println(String.format("Agent: Got serverAddr %s. Connecting to it...", serverAddr.toString()));
 
 			receiveData(serverAddr);
-			
+
 		} catch (Exception e) {
 			System.out.println(String.format("UDP: [S]: Error", e));
 		}
 	}
-	
-	private void init(){
+
+	private void init() {
 		listaGeladeiras = new ArrayList<>();
 		listaGeladeiras = FirstPopulator.populate();
 	}
-	
+
 	private void receiveData(InetAddress serverAddr) throws SocketException, IOException {
 		// aqui monta o socket de receber dados
 		DatagramSocket socket = new DatagramSocket(SERVERPORTRECEIVE, serverAddr);
@@ -44,8 +44,6 @@ public class Agent {
 		/* Prepare the UDP packet for received data */
 		DatagramPacket packet = new DatagramPacket(buf, buf.length);
 		do {
-			int receivedPacketsCounter = 1;
-			BitSet receivedPackets = new BitSet(TOTAL_PACKETS);
 			long ini_time = 0, fin_time;
 			socket.setSoTimeout(0);
 			System.out.println("");
@@ -58,140 +56,138 @@ public class Agent {
 				System.out.println("Agent: [TRANSMISSION]: Starting Transmission");
 				socket.setSoTimeout(10000); /* Set a timeout for socket */
 				data = packet.getData(); /*
-										  * Get the packet data, to analyze first 4
-										  * bytes
-										  */
-				dataFull = dataFull+data;
+										 * Get the packet data, to analyze first
+										 * 4 bytes
+										 */
+				dataFull = dataFull + data;
 
-//				analyzeDataFromManager(data);
+				// analyzeDataFromManager(data);
 				ini_time = System.nanoTime();
 				i++;
-				System.out.println("Agent: [TRANSMISSION]: Packet ["+i+"] Data:"+ data.toString());
+				System.out.println("Agent: [TRANSMISSION]: Packet [" + i + "] Data:" + data.toString());
 				do {
 
 					/* Receive next packets */
 					socket.receive(packet);
 					i++;
-					System.out.println("Agent: [TRANSMISSION]: Packet ["+i+"] Data:"+ data.toString());
+					System.out.println("Agent: [TRANSMISSION]: Packet [" + i + "] Data:" + data.toString());
 					data = packet.getData();
-					dataFull = dataFull+data;
+					dataFull = dataFull + data;
 				} while (true);
-				
+
 			} catch (SocketTimeoutException e) {
 				fin_time = System.nanoTime();
 				System.out.println(String.format("Agent: [TRANSMISSION]: Total elapsed time %d ns", fin_time - ini_time));
-				System.out.println("Agent: [TRANSMISSION]: Datagram info: "+dataFull);
+				System.out.println("Agent: [TRANSMISSION]: Datagram info: " + dataFull);
 				System.out.println("Agent: [TRANSMISSION]: ENDED");
 			}
 		} while (true);
 	}
 
-
-	private  void analyzeDataFromManager(byte[] data) {
-		//TODO aqui deve-se analisar o que veio do datagrama snmp do gerente
+	private void analyzeDataFromManager(byte[] data) {
+		// TODO aqui deve-se analisar o que veio do datagrama snmp do gerente
 		String pdu = getPDUType(data);
 		String dados = getPDUData(data);
 		SNMPPDUType tipoPDU = SNMPPDUType.valueOf(pdu);
-		//TODO ainda necessário trabalhar essa porra aqui para pegar a PDU direito
+		// TODO ainda necessário trabalhar essa porra aqui para pegar a PDU
+		// direito
 
 		switch (tipoPDU) {
-		case GETREQUEST:
-			getRequest(dados);
-			break;
+			case GETREQUEST:
+				getRequest(dados);
+				break;
 
-		case GETNEXTREQUEST:
-			getNextRequest(dados);
-			break;
+			case GETNEXTREQUEST:
+				getNextRequest(dados);
+				break;
 
-		case GETRESPONSE:
-			getResponse(dados);
-			break;
+			case GETRESPONSE:
+				getResponse(dados);
+				break;
 
-		case SETREQUEST:
-			setRequest(dados);
-			break;
+			case SETREQUEST:
+				setRequest(dados);
+				break;
 
-		case TRAP:
-			trap(dados);
-			break;
+			case TRAP:
+				trap(dados);
+				break;
 
 		}
 
 	}
 
-	private  String getPDUType(byte[] data) {
+	private String getPDUType(byte[] data) {
 		String tipoPDU = null; // TODO aqui tem que analisar o dado que veio do
-							   // manager, e pegar qual o tipo de PDU que
-							   // estamos tratando
+								// manager, e pegar qual o tipo de PDU que
+								// estamos tratando
 		return tipoPDU;
 	}
 
-	private  String getPDUData(byte[] data) {
+	private String getPDUData(byte[] data) {
 		// TODO analisar Datagrama e buscar os dados da PDU
 		return null;
 	}
 
-	private  CampoValor getFieldAndValue(String dados) {
+	private CampoValor getFieldAndValue(String dados) {
 		// TODO implementar lógica de buscar o campo analisando os
 		// 1.2.4.56654.4.52421.24 da vida
 		CampoValor campoValor = new CampoValor();
-		if(campoValor.getField() == null)
-		{
-			
+		if (campoValor.getField() == null) {
+
 		}
 
 		return null;
 	}
 
-	private  void getRequest(String dados) {
+	private void getRequest(String dados) {
 		CampoValor campoValor = getFieldAndValue(dados);
 		sendToManager(SNMPPDUType.GETRESPONSE, campoValor);
 	}
 
-	private  void getNextRequest(String dados) {
-		CampoValor campoValor = getFieldAndValue(dados);
-		sendToManager(SNMPPDUType.GETRESPONSE, campoValor);
-
-	}
-
-	private  void getResponse(String dados) {
+	private void getNextRequest(String dados) {
 		CampoValor campoValor = getFieldAndValue(dados);
 		sendToManager(SNMPPDUType.GETRESPONSE, campoValor);
 
 	}
 
-	private  void setRequest(String dados) {
+	private void getResponse(String dados) {
 		CampoValor campoValor = getFieldAndValue(dados);
 		sendToManager(SNMPPDUType.GETRESPONSE, campoValor);
 
 	}
 
-	private  void trap(String dados) {
+	private void setRequest(String dados) {
+		CampoValor campoValor = getFieldAndValue(dados);
+		sendToManager(SNMPPDUType.GETRESPONSE, campoValor);
+
+	}
+
+	private void trap(String dados) {
 		TrapType trapType = getTrapType(dados);
 		sendToManager(SNMPPDUType.TRAP, trapType);
 
 	}
 
-	private  String searchField(byte[] data) {
-		String campo = data.toString(); // TODO aqui pegar o campo que está sendo
+	private String searchField(byte[] data) {
+		String campo = data.toString(); // TODO aqui pegar o campo que está
+										// sendo
 										// requerido qlqr coisa
 										// (1.2.3.4.56.56.89.78964.56.1)
 		return null;
 	}
-	
-	private  TrapType getTrapType(String dados) {
+
+	private TrapType getTrapType(String dados) {
 		// TODO aqui se pega o tipo de trap que foi enviado
 		return null;
 	}
 
-
-	private  void sendToManager(SNMPPDUType trap, TrapType trapType) {
+	private void sendToManager(SNMPPDUType trap, TrapType trapType) {
 		// TODO fazer a resposta pro manager de traps
 		// sendData();
-		
+
 	}
 
-	
 	private void sendToManager(SNMPPDUType getresponse, CampoValor campoValor) {
 		// TODO aqui começa a lógica de enviar dados para o gerente
 		// sendData();

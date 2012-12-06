@@ -28,8 +28,7 @@ public class Manager {
 			byte[] buf = new byte[1472];
 			DatagramPacket packet;
 			/* Creates UDP packet with data and destination */
-			packet = new DatagramPacket(buf, buf.length, serverAddr,
-					SERVERPORTSEND);
+			packet = new DatagramPacket(buf, buf.length, serverAddr, SERVERPORTSEND);
 			System.out.println("sending data");
 			sendData(socket, buf, packet);
 			/* All messages sent, close the socket */
@@ -40,12 +39,10 @@ public class Manager {
 		}
 	}
 
-	private void sendData(DatagramSocket socket, byte[] buf,
-			DatagramPacket packet) throws IOException, InterruptedException {
+	private void sendData(DatagramSocket socket, byte[] buf, DatagramPacket packet) throws IOException, InterruptedException {
 		// aqui vem a lógica de enviar dados snmp
 		for (int i = 0; i < TOTAL_PACKETS; i++) {
-			System.arraycopy(ByteBuffer.allocate(4).putInt(i).array(), 0, buf,
-					0, 4);
+			System.arraycopy(ByteBuffer.allocate(4).putInt(i).array(), 0, buf, 0, 4);
 			socket.send(packet);
 			Thread.sleep(1, 0); // 10 milliseconds
 			if (i % 100 == 0) {

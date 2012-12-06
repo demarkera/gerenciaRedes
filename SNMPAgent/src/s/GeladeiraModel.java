@@ -1,7 +1,6 @@
 package s;
 
 import java.util.ArrayList;
-import java.util.List;
 
 public class GeladeiraModel {
 	private boolean turnedOn;
