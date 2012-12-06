@@ -1,0 +1,6 @@
+package snmp;
+
+public enum SNMPPDUType {
+	NULO,GETREQUEST, GETNEXTREQUEST, GETRESPONSE, SETREQUEST, TRAP;
+	
+}
