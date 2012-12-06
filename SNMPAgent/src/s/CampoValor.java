@@ -1,14 +1,9 @@
 package s;
 
 public class CampoValor {
-	private String field;
-	private String value;
-	private String error;
+	private String field; //length 50
+	private String value; // length 5
 	
-	public CampoValor(){
-		setError(null);
-	}
-
 	public String getField() {
 		return field;
 	}
@@ -22,13 +17,5 @@ public class CampoValor {
 		this.value = value;
 	}
 
-	public String getError() {
-		return error;
-	}
-
-	public void setError(String error) {
-		this.error = error;
-	}
-	
 	
 }

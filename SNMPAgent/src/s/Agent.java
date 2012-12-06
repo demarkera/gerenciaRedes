@@ -6,8 +6,10 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.List;
 
 public class Agent {
 	private String SERVERIP = "localhost";
@@ -40,22 +42,22 @@ public class Agent {
 		// aqui monta o socket de receber dados
 		DatagramSocket socket = new DatagramSocket(SERVERPORTRECEIVE, serverAddr);
 		/* Define maximum length of UDP packets */
-		byte[] buf = new byte[1472];
+		String buf = "";
 		/* Prepare the UDP packet for received data */
-		DatagramPacket packet = new DatagramPacket(buf, buf.length);
+		DatagramPacket packet = new DatagramPacket(buf.getBytes(), buf.length());
 		do {
 			long ini_time = 0, fin_time;
 			socket.setSoTimeout(0);
 			System.out.println("");
 			System.out.println(String.format("Agent: Entering loop to receive packets..."));
-			byte[] data = null;
+			String data = null;
 			String dataFull = null;
 			int i = 0;
 			try {
 				socket.receive(packet); /* Receive the first packet */
 				System.out.println("Agent: [TRANSMISSION]: Starting Transmission");
 				socket.setSoTimeout(10000); /* Set a timeout for socket */
-				data = packet.getData(); /*
+				data = packet.getData().toString(); /*
 										 * Get the packet data, to analyze first
 										 * 4 bytes
 										 */
@@ -64,14 +66,14 @@ public class Agent {
 				// analyzeDataFromManager(data);
 				ini_time = System.nanoTime();
 				i++;
-				System.out.println("Agent: [TRANSMISSION]: Packet [" + i + "] Data:" + data.toString());
+				System.out.println("Agent: [TRANSMISSION]: Packet [" + i + "] Data:" + data);
 				do {
 
 					/* Receive next packets */
 					socket.receive(packet);
 					i++;
-					System.out.println("Agent: [TRANSMISSION]: Packet [" + i + "] Data:" + data.toString());
-					data = packet.getData();
+					data = packet.getData().toString();
+					System.out.println("Agent: [TRANSMISSION]: Packet [" + i + "] Data:" + data);
 					dataFull = dataFull + data;
 				} while (true);
 
@@ -86,95 +88,224 @@ public class Agent {
 
 	private void analyzeDataFromManager(byte[] data) {
 		// TODO aqui deve-se analisar o que veio do datagrama snmp do gerente
-		String pdu = getPDUType(data);
-		String dados = getPDUData(data);
-		SNMPPDUType tipoPDU = SNMPPDUType.valueOf(pdu);
-		// TODO ainda necessário trabalhar essa porra aqui para pegar a PDU
-		// direito
+		SNMPPDU pduRecebida = new SNMPPDU();
+		// esta linha popula a classe com todas as informações que vieram do
+		// Manager
+		pduRecebida.parse(data);
 
-		switch (tipoPDU) {
-			case GETREQUEST:
-				getRequest(dados);
-				break;
+		for (CampoValor campoValor : pduRecebida.getCamposRequisidatos()) {
 
-			case GETNEXTREQUEST:
-				getNextRequest(dados);
-				break;
+			switch (pduRecebida.getPduType()) {
+				case GETREQUEST:
+					getRequest(campoValor);
+					break;
 
-			case GETRESPONSE:
-				getResponse(dados);
-				break;
+				case GETNEXTREQUEST:
+					// getNextRequest(campoValor);
+					break;
 
-			case SETREQUEST:
-				setRequest(dados);
-				break;
+				case GETRESPONSE:
+					// getResponse(campoValor);
+					break;
 
-			case TRAP:
-				trap(dados);
-				break;
+				case SETREQUEST:
+					setRequest(campoValor);
+					break;
 
+				case TRAP:
+					trap(campoValor);
+					break;
+			}
+		}
+	}
+
+	private void getRequest(CampoValor campoValor) {
+		String field = clearOID(campoValor.getField());
+		GeladeiraModel geladeira = listaGeladeiras.get(0);
+		// aqui testamos se nao é gaveta
+		if (field.contains(".7")) {
+			int numeroGaveta = pegaNumeroGaveta(field);
+			String itemGaveta = field.substring(4, 5);
+			if (geladeira.getGaveta().get(numeroGaveta) != null) {
+				switch (itemGaveta) {
+					case ".1":
+						if (geladeira.getGaveta().get(numeroGaveta) != null)
+							campoValor.setValue(geladeira.getGaveta().get(numeroGaveta).getCervejas() + "");
+						else
+							campoValor.setValue("");
+						break;
+					case ".2":
+						if (geladeira.getGaveta().get(numeroGaveta) != null)
+							campoValor.setValue(geladeira.getGaveta().get(numeroGaveta).getLeite() + "");
+						else
+							campoValor.setValue("");
+						break;
+					case ".3":
+						if (geladeira.getGaveta().get(numeroGaveta) != null)
+							campoValor.setValue(geladeira.getGaveta().get(numeroGaveta).getOvos() + "");
+						else
+							campoValor.setValue("");
+						break;
+					case ".4":
+						if (geladeira.getGaveta().get(numeroGaveta) != null)
+							campoValor.setValue(geladeira.getGaveta().get(numeroGaveta).getIndexGaveta() + "");
+						else
+							campoValor.setValue("");
+						break;
+					default:
+						campoValor.setValue("NoSuchIndexFromTable");
+						break;
+				}
+			}
+
+		} else {
+			String objeto = field.substring(0, 2);
+			switch (objeto) {
+				case ".1":
+					if (geladeira.isTurnedOn())
+						campoValor.setValue("1");
+					else
+						campoValor.setValue("0");
+					break;
+				case ".2":
+					if (geladeira.isLampadaOn())
+						campoValor.setValue("1");
+					else
+						campoValor.setValue("0");
+					break;
+				case ".3":
+					campoValor.setValue(geladeira.getTermostato().ordinal() + "");
+					break;
+				case ".4":
+					if (geladeira.isPortaAberta())
+						campoValor.setValue("1");
+					else
+						campoValor.setValue("0");
+					break;
+				case ".5":
+					campoValor.setValue(geladeira.getDefrostDays() + "");
+					break;
+				case ".6":
+					if (geladeira.isFastFreezing())
+						campoValor.setValue("1");
+					else
+						campoValor.setValue("0");
+					break;
+				default:
+					campoValor.setValue("noSuchName");
+					break;
+			}
 		}
 
+		sendToManager(SNMPPDUType.GETRESPONSE, campoValor);
 	}
 
-	private String getPDUType(byte[] data) {
-		String tipoPDU = null; // TODO aqui tem que analisar o dado que veio do
-								// manager, e pegar qual o tipo de PDU que
-								// estamos tratando
-		return tipoPDU;
-	}
+	// private void getNextRequest(CampoValor campoValor) {
+	// sendToManager(SNMPPDUType.GETRESPONSE, campoValor);
+	//
+	// }
 
-	private String getPDUData(byte[] data) {
-		// TODO analisar Datagrama e buscar os dados da PDU
-		return null;
-	}
+	// private void getResponse(CampoValor campoValor) {
+	// sendToManager(SNMPPDUType.GETRESPONSE, campoValor);
+	//
+	// }
 
-	private CampoValor getFieldAndValue(String dados) {
-		// TODO implementar lógica de buscar o campo analisando os
-		// 1.2.4.56654.4.52421.24 da vida
-		CampoValor campoValor = new CampoValor();
-		if (campoValor.getField() == null) {
+	private void setRequest(CampoValor campoValor) {
+		sendToManager(SNMPPDUType.GETRESPONSE, campoValor);
+		String field = clearOID(campoValor.getField());
+		GeladeiraModel geladeira = listaGeladeiras.get(0);
+		// aqui testamos se nao é gaveta
+		if (field.contains(".7")) {
+			int numeroGaveta = pegaNumeroGaveta(field);
+			String itemGaveta = field.substring(4, 5);
+			if (geladeira.getGaveta().get(numeroGaveta) != null) {
+				switch (itemGaveta) {
+					case ".1":
+						geladeira.getGaveta().get(numeroGaveta).setCervejas(Integer.parseInt(campoValor.getValue()));
+						break;
+					case ".2":
+						geladeira.getGaveta().get(numeroGaveta).setLeite(Integer.parseInt(campoValor.getValue()));
+						break;
+					case ".3":
+						geladeira.getGaveta().get(numeroGaveta).setOvos(Integer.parseInt(campoValor.getValue()));
+					case ".4":
+						geladeira.getGaveta().get(numeroGaveta).setIndexGaveta(Integer.parseInt(campoValor.getValue()));
+					default:
+						campoValor.setValue("NoSuchIndexFromTable");
+						break;
+				}
+			}
 
+		} else {
+			String objeto = field.substring(0, 2);
+			switch (objeto) {
+				case ".1":
+					if (campoValor.getValue().equals(1))
+						geladeira.setTurnedOn(true);
+					else
+						geladeira.setTurnedOn(false);
+					break;
+				case ".2":
+					if (campoValor.getValue().equals(1))
+						geladeira.setLampadaOn(true);
+					else
+						geladeira.setLampadaOn(false);
+					break;
+				case ".3":
+					geladeira.setTermostato(TermostatoEnum.indexOf(campoValor.getValue()));
+					break;
+				case ".4":
+					if (campoValor.getValue().equals(1))
+						geladeira.setPortaAberta(true);
+					else
+						geladeira.setPortaAberta(false);
+					break;
+				case ".5":
+					geladeira.setDefrostDays(Integer.parseInt(campoValor.getValue()));
+					break;
+				case ".6":
+					if (campoValor.getValue().equals(1))
+						geladeira.setFastFreezing(true);
+					else
+						geladeira.setFastFreezing(false);
+					break;
+				default:
+					campoValor.setValue("noSuchName");
+					break;
+			}
 		}
-
-		return null;
 	}
 
-	private void getRequest(String dados) {
-		CampoValor campoValor = getFieldAndValue(dados);
-		sendToManager(SNMPPDUType.GETRESPONSE, campoValor);
-	}
-
-	private void getNextRequest(String dados) {
-		CampoValor campoValor = getFieldAndValue(dados);
-		sendToManager(SNMPPDUType.GETRESPONSE, campoValor);
+	private void trap(CampoValor campoValor) {
+		// TrapType trapType = getTrapType(campoValor);
+		// sendToManager(SNMPPDUType.TRAP, trapType);
 
 	}
 
-	private void getResponse(String dados) {
-		CampoValor campoValor = getFieldAndValue(dados);
-		sendToManager(SNMPPDUType.GETRESPONSE, campoValor);
-
+	private String clearOID(String field) {
+		if (field.length() != 50) {
+			System.out.println("erro no processamento do field do campoValor!!!!! diferente de 50!");
+			return "";
+		} else {
+			// tiramos o que veio de caminho da nossa MIB
+			// (".1.3.6.1.4.1.1264897646")
+			String campo = field.replace(ObjectsMib.getReference(ObjectsMib.DEFAULTOID), "");
+			return campo;
+		}
 	}
 
-	private void setRequest(String dados) {
-		CampoValor campoValor = getFieldAndValue(dados);
-		sendToManager(SNMPPDUType.GETRESPONSE, campoValor);
-
-	}
-
-	private void trap(String dados) {
-		TrapType trapType = getTrapType(dados);
-		sendToManager(SNMPPDUType.TRAP, trapType);
-
-	}
-
-	private String searchField(byte[] data) {
-		String campo = data.toString(); // TODO aqui pegar o campo que está
-										// sendo
-										// requerido qlqr coisa
-										// (1.2.3.4.56.56.89.78964.56.1)
-		return null;
+	private int pegaNumeroGaveta(String field) {
+		// aqui é pra vir qualquer coisa tipo .7.X.1", logo, o 7 temos que
+		// tirar, o X é o índice da gaveta,
+		// e pegamos o campo da gaveta no último
+		String campo = field.substring(1);// tira primeiro .
+		int indexGaveta = 0;
+		if (campo.lastIndexOf(".") != campo.indexOf(".", 0)) {
+			if (campo.length() == 5) {
+				indexGaveta = Integer.parseInt((String) campo.subSequence(2, 3));
+			}
+		}
+		return indexGaveta;
 	}
 
 	private TrapType getTrapType(String dados) {

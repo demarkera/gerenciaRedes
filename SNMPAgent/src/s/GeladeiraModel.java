@@ -9,7 +9,7 @@ public class GeladeiraModel {
 	private boolean portaAberta;
 	private int defrostDays;
 	private boolean fastFreezing;
-	private ArrayList<Gaveta> gaveta;
+	private ArrayList<Gaveta> gaveta; //máximo de 10 gavetas!
 
 	public GeladeiraModel(){
 		gaveta = new ArrayList<Gaveta>();
