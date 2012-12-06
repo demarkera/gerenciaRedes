@@ -50,14 +50,14 @@ public class Agent {
 			socket.setSoTimeout(0);
 			System.out.println("");
 			System.out.println(String.format("Agent: Entering loop to receive packets..."));
-			String data = null;
+			byte[] data = new byte[1024];
 			String dataFull = null;
 			int i = 0;
 			try {
 				socket.receive(packet); /* Receive the first packet */
 				System.out.println("Agent: [TRANSMISSION]: Starting Transmission");
 				socket.setSoTimeout(10000); /* Set a timeout for socket */
-				data = packet.getData().toString(); /*
+				data = packet.getData(); /*
 										 * Get the packet data, to analyze first
 										 * 4 bytes
 										 */
@@ -72,7 +72,7 @@ public class Agent {
 					/* Receive next packets */
 					socket.receive(packet);
 					i++;
-					data = packet.getData().toString();
+					data = packet.getData();
 					System.out.println("Agent: [TRANSMISSION]: Packet [" + i + "] Data:" + data);
 					dataFull = dataFull + data;
 				} while (true);

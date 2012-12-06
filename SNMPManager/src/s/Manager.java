@@ -28,15 +28,15 @@ public class Manager {
 			
 			//aqui é colocar a mensagem que quiser
 			
-			String buf = "100000001100.1.3.6.1.4.1.1264897646.1                        1    ";
+			byte[] buf = "100000001100.1.3.6.1.4.1.1264897646.1                        1    ".getBytes();
 			//                        [          endereço do objeto(50 caracs         ]valor  
 			//nao consegui colocar a mensagem acima no envio... vai outra coisa na da a ver..
 			
 			DatagramPacket packet;
 			/* Creates UDP packet with data and destination */
-			packet = new DatagramPacket(buf.getBytes(), buf.length(), serverAddr, SERVERPORTSEND);
+			packet = new DatagramPacket(buf, buf.length, serverAddr, SERVERPORTSEND);
 			System.out.println("sending data");
-			sendData(socket, buf.getBytes(), packet);
+			sendData(socket, buf, packet);
 			/* All messages sent, close the socket */
 			socket.close();
 			System.out.println(String.format("Done!"));
