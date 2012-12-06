@@ -10,10 +10,10 @@ import java.util.ArrayList;
 import java.util.BitSet;
 
 public class Agent {
-	public static final String SERVERIP = "127.0.0.1";
+	public static final String SERVERIP = "localhost";
 	public static final int SERVERPORTRECEIVE = 54654;
 	public static final int SERVERPORTSEND = 54655;
-	public static final int TOTAL_PACKETS = 1000;
+	public static final int TOTAL_PACKETS = 1;
 	private static ArrayList<GeladeiraModel> listaGeladeiras;
 
 	public static void main(String[] args) {
@@ -21,13 +21,13 @@ public class Agent {
 		init();
 
 		try {
-			System.out.println(String.format("UDP: [S]: Agente sendo iniciado"));
+			System.out.println(String.format("Agent: Agente sendo iniciado"));
 			/* Search server by IP address */
 			InetAddress serverAddr = InetAddress.getByName(SERVERIP);
-			System.out.println(String.format("UDP: [S]: Got serverAddr %s. Connecting to it...", serverAddr.toString()));
+			System.out.println(String.format("Agent: Got serverAddr %s. Connecting to it...", serverAddr.toString()));
 
 			receiveData(serverAddr);
-			sendData(serverAddr);
+			
 		} catch (Exception e) {
 			System.out.println(String.format("UDP: [S]: Error", e));
 		}
@@ -35,15 +35,12 @@ public class Agent {
 
 	private static void init() {
 		listaGeladeiras = new ArrayList<>();
+		listaGeladeiras = FirstPopulator.populate();
 	}
 
 	private static void receiveData(InetAddress serverAddr) throws SocketException, IOException {
 		// aqui monta o socket de receber dados
 		DatagramSocket socket = new DatagramSocket(SERVERPORTRECEIVE, serverAddr);
-		establishReceive(socket);
-	}
-
-	private static void establishReceive(DatagramSocket socket) throws SocketException, IOException {
 		/* Define maximum length of UDP packets */
 		byte[] buf = new byte[1472];
 		/* Prepare the UDP packet for received data */
@@ -51,37 +48,46 @@ public class Agent {
 		do {
 			int receivedPacketsCounter = 1;
 			BitSet receivedPackets = new BitSet(TOTAL_PACKETS);
-			byte[] seqBA;
 			long ini_time = 0, fin_time;
 			socket.setSoTimeout(0);
-			System.out.println(String.format("UDP []: [S]: Entering loop to receive packets..."));
-			// aqui efetivamente recebe dados
-			receiveData(socket, packet, receivedPacketsCounter, ini_time);
+			System.out.println("");
+			System.out.println(String.format("Agent: Entering loop to receive packets..."));
+			byte[] data = null;
+			String dataFull = null;
+			int i = 0;
+			try {
+				socket.receive(packet); /* Receive the first packet */
+				System.out.println("Agent: [TRANSMISSION]: Starting Transmission");
+				socket.setSoTimeout(10000); /* Set a timeout for socket */
+				data = packet.getData(); /*
+										  * Get the packet data, to analyze first 4
+										  * bytes
+										  */
+				dataFull = dataFull+data;
+
+//				analyzeDataFromManager(data);
+				ini_time = System.nanoTime();
+				i++;
+				System.out.println("Agent: [TRANSMISSION]: Packet ["+i+"] Data:"+ data.toString());
+				do {
+
+					/* Receive next packets */
+					socket.receive(packet);
+					i++;
+					System.out.println("Agent: [TRANSMISSION]: Packet ["+i+"] Data:"+ data.toString());
+					data = packet.getData();
+					dataFull = dataFull+data;
+				} while (true);
+				
+			} catch (SocketTimeoutException e) {
+				fin_time = System.nanoTime();
+				System.out.println(String.format("Agent: [TRANSMISSION]: Total elapsed time %d ns", fin_time - ini_time));
+				System.out.println("Agent: [TRANSMISSION]: Datagram info: "+dataFull);
+				System.out.println("Agent: [TRANSMISSION]: ENDED");
+			}
 		} while (true);
 	}
 
-	private static void receiveData(DatagramSocket socket, DatagramPacket packet, int receivedPacketsCounter, long ini_time) throws IOException,
-			SocketException {
-		byte[] data = null;
-		long fin_time;
-		try {
-			socket.receive(packet); /* Receive the first packet */
-			socket.setSoTimeout(100); /* Set a timeout for socket */
-			data = packet.getData(); /*
-									  * Get the packet data, to analyze first 4
-									  * bytes
-									  */
-			analyzeDataFromManager(data);
-
-			ini_time = System.nanoTime();
-			int i = 0;
-
-		} catch (SocketTimeoutException e) {
-			fin_time = System.nanoTime();
-			System.out.println(String.format("Agent: Total elapsed time %d ns", fin_time - ini_time));
-			System.out.println("Agent: Datagram info: "+data.toString());
-		}
-	}
 
 	private static void analyzeDataFromManager(byte[] data) {
 		//TODO aqui deve-se analisar o que veio do datagrama snmp do gerente
